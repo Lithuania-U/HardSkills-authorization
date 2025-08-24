@@ -166,9 +166,9 @@ def get_user_assessments(user_id):
     conn.close()
     return assessments
 
-# === CIRCULAR LOLLIPOP RADAR DIAGRAMA ===
-def create_circular_lollipop_chart(skills_data, title="Jūsų įgūdžių profilis", show_degrees=True):
-    """Sukurti circular lollipop radar diagramą su laipsniais"""
+# === CIRCULAR RADAR DIAGRAMA SU LINIJOMIS IR TAŠKAIS ===
+def create_circular_radar_chart(skills_data, title="Jūsų įgūdžių profilis", show_compass=True):
+    """Sukurti circular radar diagramą su linijomis ir taškais kaip PNG paveiksle"""
     
     # Paruošti duomenis
     categories = []
@@ -182,17 +182,13 @@ def create_circular_lollipop_chart(skills_data, title="Jūsų įgūdžių profil
         values.append(skills_data[angle])
         degree_positions.append(angle_int)
         
-        # Mėlyna-geltona-raudona spalvų gradientai pagal vertę
-        if skills_data[angle] >= 8:
+        # Trys pagrindinės spalvos su perėjimais
+        if skills_data[angle] >= 7:
             colors.append('#1f77b4')  # Mėlyna - stiprus
-        elif skills_data[angle] >= 6:
-            colors.append('#2ca02c')  # Žalia - geras
         elif skills_data[angle] >= 4:
-            colors.append('#ff7f0e')  # Oranžinė - vidutinis
-        elif skills_data[angle] >= 2:
-            colors.append('#ffbb78')  # Šviesi oranžinė - silpnas
+            colors.append('#d62728')  # Raudona - vidutinis
         else:
-            colors.append('#d62728')  # Raudona - labai silpnas
+            colors.append('#ffbb00')  # Geltona - silpnas
     
     N = len(categories)
     
@@ -200,28 +196,23 @@ def create_circular_lollipop_chart(skills_data, title="Jūsų įgūdžių profil
     theta = np.array(degree_positions) * np.pi / 180
     
     # Sukurti figūrą
-    fig, ax = plt.subplots(figsize=(14, 14), subplot_kw=dict(projection='polar'))
+    fig, ax = plt.subplots(figsize=(12, 12), subplot_kw=dict(projection='polar'))
     
     # Nustatyti tamsų foną
     fig.patch.set_facecolor('#1e1e1e')
     ax.set_facecolor('#1e1e1e')
     
-    # Piešti lollipop stulpelius
-    bars = ax.bar(theta, values, width=0.12, bottom=0, alpha=0.7)
+    # Piešti linijas nuo centro iki taškų (kaip PNG paveiksle)
+    for angle, value, color in zip(theta, values, colors):
+        ax.plot([angle, angle], [0, value], color=color, linewidth=2, alpha=0.8)
     
-    # Nustatyti spalvas kiekvienam stulpeliui
-    for bar, color in zip(bars, colors):
-        bar.set_color(color)
-        bar.set_edgecolor('white')
-        bar.set_linewidth(1)
-    
-    # Pridėti "lollipop" taškus viršuje
-    ax.scatter(theta, values, c=colors, s=120, alpha=1, zorder=3, edgecolors='white', linewidths=2)
+    # Pridėti taškus ant linijų galų
+    ax.scatter(theta, values, c=colors, s=80, alpha=1, zorder=3, edgecolors='white', linewidths=1.5)
     
     # Pridėti vertes ant taškų
-    for angle, value, color in zip(theta, values, colors):
-        ax.text(angle, value + 0.4, str(value), 
-                ha='center', va='center', fontsize=11, 
+    for angle, value in zip(theta, values):
+        ax.text(angle, value + 0.3, str(value), 
+                ha='center', va='center', fontsize=10, 
                 color='white', weight='bold', zorder=4)
     
     # Nustatyti ašių parametrus - 0° yra Šiaurėje (Matematika)
@@ -229,28 +220,30 @@ def create_circular_lollipop_chart(skills_data, title="Jūsų įgūdžių profil
     ax.set_theta_zero_location('N')  # 0° viršuje (Šiaurė)
     ax.set_theta_direction(1)  # Counter-clockwise (teigiama kryptimi)
     
-    # Pridėti laipsnių žymėjimus jei reikia
-    if show_degrees:
-        # Pridėti pagrindines kryptis su laipsniais
-        compass_angles = [0, 90, 180, 270]  # Šiaurė, Rytai, Pietūs, Vakarai
-        compass_labels = ['0°\n(Šiaurė)', '90°\n(Rytai)', '180°\n(Pietūs)', '270°\n(Vakarai)']
+    # Pridėti 4 pagrindines kryptis su pavadinimais
+    if show_compass:
+        compass_data = [
+            (0, "0°\nMATEMATINIS,\nLOGINIS PROTAS"),
+            (90, "90°\nSOCIALINIS -\nORGANIZACINIS,\nVALDŽIA"),
+            (180, "180°\nFIZINIS,\nGENAI, JĖGA"),
+            (270, "270°\nJAUSMAI,\nEMOCIJOS")
+        ]
         
-        for angle, label in zip(compass_angles, compass_labels):
+        for angle, label in compass_data:
             rad = angle * np.pi / 180
-            ax.text(rad, 11, label, ha='center', va='center', 
-                   fontsize=10, color='lightblue', weight='bold', zorder=5)
+            ax.text(rad, 11.5, label, ha='center', va='center', 
+                   fontsize=9, color='lightblue', weight='bold', zorder=5)
     
-    # Nustatyti kategorijų pavadinimus
+    # Nustatyti kategorijų pavadinimus (trumpinti)
     ax.set_xticks(theta)
-    # Sutrumpinti ilgus pavadinimus
     shortened_categories = []
     for cat in categories:
-        if len(cat) > 30:
-            shortened_categories.append(cat[:27] + '...')
+        if len(cat) > 25:
+            shortened_categories.append(cat[:22] + '...')
         else:
             shortened_categories.append(cat)
     
-    ax.set_xticklabels(shortened_categories, fontsize=9, color='white')
+    ax.set_xticklabels(shortened_categories, fontsize=8, color='white')
     
     # Nustatyti radialias ašis
     ax.set_ylim(0, 10)
@@ -259,19 +252,7 @@ def create_circular_lollipop_chart(skills_data, title="Jūsų įgūdžių profil
     ax.grid(True, color='gray', alpha=0.3)
     
     # Pridėti pavadinimą
-    plt.title(title, pad=30, fontsize=18, color='white', weight='bold')
-    
-    # Pridėti legendą su naujomis spalvomis
-    from matplotlib.patches import Patch
-    legend_elements = [
-        Patch(facecolor='#1f77b4', label='Stiprus (8-10)'),
-        Patch(facecolor='#2ca02c', label='Geras (6-7)'),
-        Patch(facecolor='#ff7f0e', label='Vidutinis (4-5)'),
-        Patch(facecolor='#ffbb78', label='Silpnas (2-3)'),
-        Patch(facecolor='#d62728', label='Labai silpnas (1)')
-    ]
-    ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.3, 1.0), 
-              facecolor='#1e1e1e', edgecolor='white', labelcolor='white', fontsize=10)
+    plt.title(title, pad=30, fontsize=16, color='white', weight='bold')
     
     plt.tight_layout()
     return fig
@@ -420,12 +401,12 @@ def show_profile():
                 col1, col2 = st.columns([2, 1])
                 
                 with col1:
-                    # Circular lollipop diagrama
+                    # Circular radar diagrama
                     try:
-                        fig = create_circular_lollipop_chart(
+                        fig = create_circular_radar_chart(
                             assessment['data'], 
                             f"Vertinimas #{len(assessments)-i}",
-                            show_degrees=True
+                            show_compass=True
                         )
                         st.pyplot(fig, use_container_width=True)
                     except Exception as e:
@@ -479,7 +460,7 @@ def show_main_interface():
             6. Automechaniko pameistrys, stiprus geimeris, pradedantis kūrėjas.
             7. Studentų / jaunųjų profesionalų lygis (Middle developer).
             8. Gyvenimo herojai, nacionalinio lygio senior specialistai.
-            9. Aukščiausias meistriškumas, tarptautinių projektų lygis.
+            9. Aukščiausias meistršikumas, tarptautinių projektų lygis.
             10. Genijų lygis, pasaulinio masto inovatoriai, pasaulio čempionai.
             """)
         
@@ -499,10 +480,10 @@ def show_main_interface():
     col1, col2 = st.columns([2.5, 1])
     
     with col1:
-        # Rodyti circular lollipop diagramą
+        # Rodyti circular radar diagramą
         if skills_data:
             try:
-                fig = create_circular_lollipop_chart(skills_data, show_degrees=True)
+                fig = create_circular_radar_chart(skills_data, show_compass=True)
                 st.pyplot(fig, use_container_width=True)
             except Exception as e:
                 st.error(f"Klaida generuojant diagramą: {e}")
@@ -524,21 +505,8 @@ def show_main_interface():
             
             st.divider()
             
-            # Prisijungimo raginimai
-            if 'user' not in st.session_state:
-                st.info("🔐 **Prisijunkite, kad galėtumėte:**\n- Išsaugoti vertinimus\n- Matyti progresą laike\n- Gauti AI patarimus")
-                
-                col1_btn, col2_btn = st.columns(2)
-                with col1_btn:
-                    if st.button("🔐 Prisijungti", type="secondary", use_container_width=True):
-                        st.session_state.show_auth = True
-                        st.rerun()
-                with col2_btn:
-                    if st.button("📝 Registruotis", type="primary", use_container_width=True):
-                        st.session_state.show_auth = True
-                        st.rerun()
-            else:
-                # Saugojimas prisijungusiems
+            # Saugojimas prisijungusiems
+            if 'user' in st.session_state:
                 st.subheader("💾 Išsaugoti vertinimą")
                 comment = st.text_area("💭 Pridėti refleksiją (neprivaloma)", 
                                      placeholder="Kaip jaučiatės dėl šio vertinimo? Kokie planai tobulėjimui?")
@@ -611,9 +579,9 @@ def main():
     
     **Svarbiausias klausimas:** Kuri kryptis tau ar vaikui yra mėgiama ir kokio lygio tavo pažanga?
     
-    Išvardintos 36 PROFESINĖS KRYPTYS. Pildykite tas, kurios atrodo svarbiausios ir taip kaip suprantate. Arba įvertinkite visas, tuomet gausite daug detalesnę ataskaitą ir tikslesnių patarimų.
+    Išvardintos 36 PROFESINĖS KRYPTYS. Pildykite tas, kurios atrodo svarbiausios ir taip kaip suprantate. Arba įvertinkite visas, tuomet gausite daug detalesną ataskaitą ir tikslesnių patarimų.
     
-    **www.sekmes.lt**
+    **https://www.sekmes.lt**
     """)
     
     # Tikrinti ar rodyti autentifikaciją
@@ -633,7 +601,7 @@ def main():
                 register_form()
         return
     
-    # Viršutinė navigacijos juosta
+    # Viršutinė navigacijos juosta (tik prisijungusiems)
     if 'user' in st.session_state:
         col1, col2 = st.columns([4, 1])
         
@@ -650,19 +618,8 @@ def main():
                 if 'show_profile' in st.session_state:
                     del st.session_state.show_profile
                 st.rerun()
-    else:
-        # Mygtukai prisijungimui neprisijungusiems
-        col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 3])
-        with col3:
-            if st.button("🔐 Prisijungti", type="secondary"):
-                st.session_state.show_auth = True
-                st.rerun()
-        with col4:
-            if st.button("📝 Registruotis", type="primary"):
-                st.session_state.show_auth = True
-                st.rerun()
-    
-    st.divider()
+        
+        st.divider()
     
     # Tikrinti ar rodyti profilį
     if 'user' in st.session_state and st.session_state.get('show_profile', False):
@@ -671,6 +628,22 @@ def main():
     
     # Rodyti pagrindinį interface
     show_main_interface()
+    
+    # Prisijungimo mygtukai PABAIGOJE
+    if 'user' not in st.session_state:
+        st.divider()
+        st.subheader("💾 Išsaugoti savo rezultatus")
+        st.info("🔐 **Prisijunkite, kad galėtumėte:**\n- Išsaugoti vertinimus\n- Matyti progresą laike\n- Gauti AI patarimus\n- Palyginti rezultatus")
+        
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
+            if st.button("🔐 Prisijungti", type="secondary", use_container_width=True):
+                st.session_state.show_auth = True
+                st.rerun()
+        with col2:
+            if st.button("📝 Registruotis", type="primary", use_container_width=True):
+                st.session_state.show_auth = True
+                st.rerun()
 
 if __name__ == "__main__":
     main()
